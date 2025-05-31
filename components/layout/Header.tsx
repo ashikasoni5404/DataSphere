@@ -4,16 +4,18 @@ import { useState, useEffect } from "react";
 import Link from "next/link";
 import { useTheme } from "next-themes";
 import { Button } from "@/components/ui/button";
-import { 
-  Menu, 
-  X, 
-  Sun, 
-  Moon, 
-  Database, 
-  BarChart2, 
-  BrainCircuit 
+import {
+  Menu,
+  X,
+  Sun,
+  Moon,
+  Database,
+  BarChart2,
+  BrainCircuit,
+  User
 } from "lucide-react";
-
+import { signInWithPopup } from "firebase/auth";
+import { auth, provider } from "@/app/firebase"
 const navItems = [
   { name: "Home", href: "#" },
   { name: "About", href: "#about" },
@@ -26,8 +28,11 @@ const navItems = [
 export function Header() {
   const [isScrolled, setIsScrolled] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const [showPopup, setShowPopup] = useState(false);
   const { theme, setTheme } = useTheme();
-
+  const handleSignin = () => {
+    setShowPopup(true); // open modal
+  };
   useEffect(() => {
     const handleScroll = () => {
       if (window.scrollY > 10) {
@@ -45,13 +50,38 @@ export function Header() {
     setTheme(theme === "light" ? "dark" : "light");
   };
 
+
+  const [isSigningIn, setIsSigningIn] = useState(false);
+
+  const handleGoogleLogin = async () => {
+    if (isSigningIn) return; // block repeat attempts
+    setIsSigningIn(true);
+    try {
+      const result = await signInWithPopup(auth, provider);
+      console.log("Signed in user------:", result.user);
+      // console.log("accessToken------:", result.user.displayName);
+      if (result?.user?.displayName) {
+        localStorage.setItem("name", result.user.displayName);
+      } else {
+        localStorage.setItem("name", "Guest");
+      }
+
+      alert(`Successfully login ${result.user.displayName}`);
+
+      setShowPopup(false);
+    } catch (error) {
+      console.error("Google sign-in error:", error);
+    } finally {
+      setIsSigningIn(false);
+    }
+  };
+
   return (
     <header
-      className={`fixed top-0 left-0 right-0 z-50 transition-all duration-300 ${
-        isScrolled
-          ? "bg-white/90 dark:bg-gray-900/90 backdrop-blur-md shadow-sm"
-          : "bg-transparent"
-      }`}
+      className={`fixed top-0 left-0 right-0 z-50 transition-all duration-300 ${isScrolled
+        ? "bg-white/90 dark:bg-gray-900/90 backdrop-blur-md shadow-sm"
+        : "bg-transparent"
+        }`}
     >
       <div className="container mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex items-center justify-between h-16 md:h-20">
@@ -79,6 +109,14 @@ export function Header() {
                 {item.name}
               </Link>
             ))}
+            <Button
+              variant="outline"
+              size="icon"
+              onClick={handleSignin}
+              className="ml-2"
+            >
+              <User className="h-6 w-6 text-gray-600 dark:text-gray-400" />
+            </Button>
             <Button
               variant="outline"
               size="icon"
@@ -136,6 +174,34 @@ export function Header() {
                 {item.name}
               </Link>
             ))}
+          </div>
+        </div>
+      )}
+
+
+      {showPopup && (
+        <div className="fixed inset-0 z-50 bg-black/40 flex items-center justify-center">
+          <div className="bg-white dark:bg-gray-800 rounded-xl p-6 w-[90%] max-w-sm shadow-xl text-center">
+            <h2 className="text-lg font-semibold mb-2 text-gray-900 dark:text-white">
+              Sign in to DataSphere
+            </h2>
+            <p className="text-sm text-gray-500 dark:text-gray-300 mb-4">
+              Sign in to sync your data and access premium features.
+            </p>
+            <Button
+              onClick={handleGoogleLogin}
+              className="w-full bg-blue-600 hover:bg-blue-700 text-white"
+              disabled={isSigningIn}
+            >
+              {isSigningIn ? "Signing in..." : "Continue with Google"}
+            </Button>
+
+            <button
+              onClick={() => setShowPopup(false)}
+              className="mt-3 text-sm text-gray-500 dark:text-gray-400 hover:underline"
+            >
+              Cancel
+            </button>
           </div>
         </div>
       )}
